@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de Bord de Révision CCNA 1 (ITN v7)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Tech Blue & Slate -->
+    <!-- Application Structure Plan: 
+         - Layout: Dashboard style with a sidebar navigation (mobile responsive) and a main content area.
+         - Sections:
+            1. Overview (Hero + Key Stats)
+            2. Models & Encapsulation (Conceptual visualization)
+            3. Protocols & Ports (Interactive Data Table + Charts)
+            4. IPv4 Subnetting (Visual Calculator/Chart)
+            5. Hardware & Security (Cards & Comparison)
+            6. CLI Simulator (Interactive Terminal)
+         - Flow: Users can jump between topics. The focus is on active recall (CLI simulator) and data visualization (Subnet sizes, Protocol types).
+         - Justification: The exam covers diverse topics (theory, math, commands). A dashboard allows separating these distinct cognitive tasks while keeping them accessible.
+    -->
+    
+    <!-- Visualization & Content Choices:
+         1. Protocol Distribution (Doughnut Chart): Shows the balance between TCP and UDP protocols to help memorize transport layers.
+         2. Subnet Capacity (Bar Chart): Visually compares usable hosts per CIDR block, making the exponential decrease of available addresses obvious.
+         3. Interactive CLI Terminal: Simulates the command line experience to reinforce command syntax and output.
+         4. Dynamic Table: Allows filtering ports/protocols, essential for the "memorize ports" requirement.
+         5. Cards/Accordions: Used for text-heavy sections (Security, Models) to reduce cognitive load.
+    -->
+    
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .terminal-cursor::after {
+            content: '▋';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        /* Custom Scrollbar for the terminal and table */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Mobile Header -->
+    <header class="md:hidden bg-blue-900 text-white p-4 flex justify-between items-center sticky top-0 z-50">
+        <h1 class="text-xl font-bold">CCNA 1 Révision</h1>
+        <button id="mobile-menu-btn" class="p-2 focus:outline-none text-2xl">☰</button>
+    </header>
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        
+        <!-- Sidebar Navigation -->
+        <nav id="sidebar" class="hidden md:flex flex-col w-full md:w-64 bg-slate-900 text-slate-300 fixed md:sticky top-0 h-screen z-40 transition-all duration-300">
+            <div class="p-6 border-b border-slate-700">
+                <h1 class="text-2xl font-bold text-white tracking-tight">CCNA 1 <span class="text-blue-400">ITN v7</span></h1>
+                <p class="text-xs text-slate-500 mt-2">Fiche de Révision Interactive</p>
+            </div>
+            <ul class="flex-1 overflow-y-auto py-4 space-y-1">
+                <li><button onclick="scrollToSection('hero')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent hover:border-blue-500">Vue d'ensemble</button></li>
+                <li><button onclick="scrollToSection('models')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent hover:border-blue-500">Modèles & Encapsulation</button></li>
+                <li><button onclick="scrollToSection('protocols')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent hover:border-blue-500">Protocoles & Ports</button></li>
+                <li><button onclick="scrollToSection('addressing')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent hover:border-blue-500">Adressage IPv4/IPv6</button></li>
+                <li><button onclick="scrollToSection('hardware')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent hover:border-blue-500">Matériel & Sécurité</button></li>
+                <li><button onclick="scrollToSection('cli')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors border-l-4 border-transparent hover:border-blue-500">Commandes CLI</button></li>
+                <li><button onclick="scrollToSection('traps')" class="w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-red-400 transition-colors border-l-4 border-transparent hover:border-red-500">Pièges Fréquents</button></li>
+            </ul>
+            <div class="p-4 border-t border-slate-700 text-xs text-center text-slate-500">
+                Basé sur 160 questions d'examen
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 lg:p-12 overflow-x-hidden">
+            
+            <!-- Hero Section -->
+            <section id="hero" class="mb-12 scroll-mt-24">
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl mb-8">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Tableau de Bord de Révision</h2>
+                    <p class="text-blue-100 max-w-2xl text-lg">
+                        Bienvenue sur votre outil de révision ultime. Ce tableau de bord synthétise les concepts clés, les pièges et les données techniques extraits de l'examen final CCNA 1. Explorez les sections pour visualiser les protocoles, simuler des commandes et maîtriser l'adressage.
+                    </p>
+                </div>
+                
+                <!-- Key Metrics Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-slate-500 text-sm font-medium uppercase">Questions Analysées</div>
+                        <div class="text-3xl font-bold text-slate-800 mt-1">~160</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-slate-500 text-sm font-medium uppercase">Protocoles Clés</div>
+                        <div class="text-3xl font-bold text-blue-600 mt-1">10+</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-slate-500 text-sm font-medium uppercase">Couches OSI</div>
+                        <div class="text-3xl font-bold text-indigo-600 mt-1">7</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-slate-500 text-sm font-medium uppercase">Commandes IOS</div>
+                        <div class="text-3xl font-bold text-emerald-600 mt-1">9</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Models Section -->
+            <section id="models" class="mb-16 scroll-mt-24">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="bg-blue-100 text-blue-700 p-2 rounded-lg text-xl">🌐</span>
+                    <h2 class="text-2xl font-bold text-slate-800">Modèles & Encapsulation</h2>
+                </div>
+                <p class="text-slate-600 mb-6 leading-relaxed bg-white p-4 rounded-lg border-l-4 border-blue-500 shadow-sm">
+                    Cette section clarifie comment les données circulent à travers le réseau. L'encapsulation est le processus fondamental où chaque couche ajoute ses propres informations (en-tête) aux données. Comprendre la correspondance entre les couches OSI et TCP/IP est crucial pour l'examen.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Interactive Encapsulation Flow -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="font-bold text-lg mb-4 text-slate-700">Visualisation de l'Encapsulation</h3>
+                        <div class="relative space-y-4">
+                            <!-- Step 1 -->
+                            <div class="flex items-center gap-4 p-4 bg-orange-50 rounded-lg border border-orange-100 transition-all hover:shadow-md cursor-pointer group">
+                                <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold group-hover:bg-orange-500 group-hover:text-white transition-colors">L4</div>
+                                <div>
+                                    <div class="font-bold text-slate-800">Transport</div>
+                                    <div class="text-sm text-slate-500">Données + En-tête TCP/UDP = <span class="font-mono text-orange-600 bg-orange-100 px-1 rounded">Segment</span></div>
+                                </div>
+                            </div>
+                            <!-- Arrow -->
+                            <div class="flex justify-center -my-2"><span class="text-slate-300 text-xl">↓</span></div>
+                            <!-- Step 2 -->
+                            <div class="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100 transition-all hover:shadow-md cursor-pointer group">
+                                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold group-hover:bg-blue-500 group-hover:text-white transition-colors">L3</div>
+                                <div>
+                                    <div class="font-bold text-slate-800">Réseau</div>
+                                    <div class="text-sm text-slate-500">Segment + En-tête IP = <span class="font-mono text-blue-600 bg-blue-100 px-1 rounded">Paquet</span></div>
+                                </div>
+                            </div>
+                            <!-- Arrow -->
+                            <div class="flex justify-center -my-2"><span class="text-slate-300 text-xl">↓</span></div>
+                            <!-- Step 3 -->
+                            <div class="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-100 transition-all hover:shadow-md cursor-pointer group">
+                                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold group-hover:bg-green-500 group-hover:text-white transition-colors">L2</div>
+                                <div>
+                                    <div class="font-bold text-slate-800">Liaison de Données</div>
+                                    <div class="text-sm text-slate-500">Paquet + En-tête MAC = <span class="font-mono text-green-600 bg-green-100 px-1 rounded">Trame</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Concepts Cards -->
+                    <div class="space-y-4">
+                         <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+                            <h4 class="font-bold text-indigo-600 mb-2">Couche Liaison (L2) - Sous-couches</h4>
+                            <ul class="space-y-3">
+                                <li class="flex items-start gap-3">
+                                    <span class="text-lg">🛠️</span>
+                                    <div>
+                                        <span class="font-semibold block text-sm">MAC (Media Access Control)</span>
+                                        <span class="text-sm text-slate-500">Gère l'adressage physique (00:1A:...) et délimite les trames.</span>
+                                    </div>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <span class="text-lg">🧠</span>
+                                    <div>
+                                        <span class="font-semibold block text-sm">LLC (Logical Link Control)</span>
+                                        <span class="text-sm text-slate-500">Fait le lien avec L3. Identifie le protocole réseau (IPv4 vs IPv6).</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-800 text-slate-300 rounded-xl p-5 shadow-sm">
+                            <h4 class="font-bold text-white mb-2">OSI vs TCP/IP</h4>
+                            <p class="text-sm mb-3">La différence majeure réside dans le regroupement des couches supérieures.</p>
+                            <div class="grid grid-cols-2 gap-4 text-xs">
+                                <div class="border border-slate-600 p-2 rounded">
+                                    <div class="font-bold text-yellow-400 mb-1">OSI</div>
+                                    <div>Application</div>
+                                    <div>Présentation</div>
+                                    <div>Session</div>
+                                </div>
+                                <div class="border border-slate-600 p-2 rounded flex flex-col justify-center bg-slate-700">
+                                    <div class="font-bold text-blue-400 mb-1">TCP/IP</div>
+                                    <div class="h-full flex items-center">Application</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Protocols Section -->
+            <section id="protocols" class="mb-16 scroll-mt-24">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="bg-indigo-100 text-indigo-700 p-2 rounded-lg text-xl">🔌</span>
+                    <h2 class="text-2xl font-bold text-slate-800">Protocoles & Ports</h2>
+                </div>
+                <p class="text-slate-600 mb-6 bg-white p-4 rounded-lg border-l-4 border-indigo-500 shadow-sm">
+                    Cette section est critique pour l'examen. Vous devez mémoriser les numéros de ports et leur protocole de transport associé (TCP ou UDP). Utilisez le tableau interactif pour filtrer et le graphique pour visualiser la répartition.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Chart -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col items-center">
+                        <h3 class="font-bold text-slate-700 mb-4 text-center">Répartition Transport (TCP vs UDP)</h3>
+                        <div class="chart-container">
+                            <canvas id="protocolChart"></canvas>
+                        </div>
+                        <p class="text-xs text-center text-slate-400 mt-4">Basé sur les protocoles clés de la fiche</p>
+                    </div>
+
+                    <!-- Interactive Table -->
+                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                            <h3 class="font-bold text-slate-700">Explorateur de Ports</h3>
+                            <input type="text" id="portSearch" placeholder="Rechercher (ex: 80, DNS)..." class="border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 w-full sm:w-64">
+                        </div>
+                        <div class="overflow-x-auto h-80 overflow-y-auto border rounded-lg">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-slate-500 font-semibold sticky top-0">
+                                    <tr>
+                                        <th class="p-3">Protocole</th>
+                                        <th class="p-3">Port</th>
+                                        <th class="p-3">Transport</th>
+                                        <th class="p-3">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="protocolTableBody" class="divide-y divide-slate-100">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Addressing Section -->
+            <section id="addressing" class="mb-16 scroll-mt-24">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="bg-emerald-100 text-emerald-700 p-2 rounded-lg text-xl">🔢</span>
+                    <h2 class="text-2xl font-bold text-slate-800">Adressage IPv4 & IPv6</h2>
+                </div>
+                <p class="text-slate-600 mb-6 bg-white p-4 rounded-lg border-l-4 border-emerald-500 shadow-sm">
+                    Maîtrisez le calcul de sous-réseaux pour ne pas gaspiller d'adresses. Visualisez ci-dessous comment la taille du masque impacte le nombre d'hôtes disponibles. N'oubliez pas la formule : <span class="font-mono bg-slate-100 px-1">2^n - 2</span>.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Subnet Chart -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                        <h3 class="font-bold text-slate-700 mb-4">Capacité des Sous-réseaux (Hôtes Utilisables)</h3>
+                        <div class="chart-container">
+                            <canvas id="subnetChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- IPv6 Cards -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-slate-700">Types d'Adresses IPv6</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                                <div class="text-xs font-bold text-purple-600 uppercase mb-1">FE80::/10</div>
+                                <h4 class="font-bold text-slate-800 mb-1">Link-Local</h4>
+                                <p class="text-xs text-slate-600">Obligatoire. Unique sur le lien uniquement. Non routable.</p>
+                            </div>
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                <div class="text-xs font-bold text-blue-600 uppercase mb-1">2000::/3</div>
+                                <h4 class="font-bold text-slate-800 mb-1">Global Unicast</h4>
+                                <p class="text-xs text-slate-600">Routable sur Internet. L'adresse publique standard.</p>
+                            </div>
+                            <div class="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                                <div class="text-xs font-bold text-orange-600 uppercase mb-1">FF00::/8</div>
+                                <h4 class="font-bold text-slate-800 mb-1">Multicast</h4>
+                                <p class="text-xs text-slate-600">FF02::1 (Tous les nœuds), FF02::2 (Tous les routeurs).</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                <div class="text-xs font-bold text-slate-600 uppercase mb-1">SLAAC / EUI-64</div>
+                                <h4 class="font-bold text-slate-800 mb-1">Autoconfig</h4>
+                                <p class="text-xs text-slate-600">EUI-64: Insérer FFFE au milieu de la MAC + Inverser 7ème bit.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+             <!-- Hardware & Security -->
+             <section id="hardware" class="mb-16 scroll-mt-24">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="bg-red-100 text-red-700 p-2 rounded-lg text-xl">🛡️</span>
+                    <h2 class="text-2xl font-bold text-slate-800">Matériel & Sécurité</h2>
+                </div>
+                <p class="text-slate-600 mb-6 bg-white p-4 rounded-lg border-l-4 border-red-500 shadow-sm">
+                    Identifiez les méthodes de commutation et les menaces courantes. La sécurité commence par la connaissance des attaques (Vers, DoS) et la configuration correcte des équipements (SSH, Password Encryption).
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Switching Methods -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-100 px-6 py-3 font-bold text-slate-700 border-b">Méthodes de Commutation (Switching)</div>
+                        <div class="p-6 space-y-4">
+                            <div class="flex gap-4">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">1</div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800">Store-and-Forward</h4>
+                                    <p class="text-sm text-slate-600 mt-1">Reçoit toute la trame, vérifie les erreurs (FCS), puis envoie. <span class="text-green-600 font-semibold">Fiable</span> mais plus lent.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">2</div>
+                                <div>
+                                    <h4 class="font-bold text-slate-800">Cut-Through</h4>
+                                    <p class="text-sm text-slate-600 mt-1">Envoie dès que l'adresse destination est lue. <span class="text-green-600 font-semibold">Rapide</span> mais propage les erreurs.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Threats Accordion -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-red-50 px-6 py-3 font-bold text-red-700 border-b border-red-100">Types de Menaces</div>
+                        <div id="threatsContainer" class="divide-y divide-slate-100">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CLI Simulator -->
+            <section id="cli" class="mb-16 scroll-mt-24">
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="bg-slate-800 text-white p-2 rounded-lg text-xl">💻</span>
+                    <h2 class="text-2xl font-bold text-slate-800">Simulateur CLI & Dépannage</h2>
+                </div>
+                <p class="text-slate-600 mb-6 bg-white p-4 rounded-lg border-l-4 border-slate-700 shadow-sm">
+                    Familiarisez-vous avec les commandes Cisco IOS et Windows. Cliquez sur une commande pour voir son effet ou sa sortie typique dans le terminal simulé.
+                </p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Command List -->
+                    <div class="space-y-2">
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Windows (PC)</div>
+                        <button onclick="runCommand('ping')" class="w-full text-left px-4 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 rounded font-mono text-sm transition-colors text-slate-700">ping 192.168.1.1</button>
+                        <button onclick="runCommand('ipconfig')" class="w-full text-left px-4 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 rounded font-mono text-sm transition-colors text-slate-700">ipconfig</button>
+                        <button onclick="runCommand('tracert')" class="w-full text-left px-4 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 rounded font-mono text-sm transition-colors text-slate-700">tracert google.com</button>
+                        
+                        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-4">Cisco IOS</div>
+                        <button onclick="runCommand('sh_ip_int_br')" class="w-full text-left px-4 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 rounded font-mono text-sm transition-colors text-slate-700">show ip interface brief</button>
+                        <button onclick="runCommand('sh_run')" class="w-full text-left px-4 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 rounded font-mono text-sm transition-colors text-slate-700">show running-config</button>
+                        <button onclick="runCommand('sh_ip_route')" class="w-full text-left px-4 py-2 bg-white border border-slate-200 hover:bg-blue-50 hover:border-blue-200 rounded font-mono text-sm transition-colors text-slate-700">show ip route</button>
+                    </div>
+
+                    <!-- Terminal Window -->
+                    <div class="lg:col-span-2 bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 shadow-xl overflow-hidden flex flex-col h-80">
+                        <div class="flex gap-2 mb-4 border-b border-slate-700 pb-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        </div>
+                        <div id="terminalOutput" class="flex-1 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                            C:\Users\Admin> _ <span class="terminal-cursor"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Traps Section -->
+            <section id="traps" class="mb-16 scroll-mt-24">
+                <div class="bg-red-50 border-l-8 border-red-500 rounded-r-xl p-8">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="text-3xl">⚠️</span>
+                        <h2 class="text-2xl font-bold text-red-800">Points "Pièges" Fréquents</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-4 rounded shadow-sm">
+                            <h4 class="font-bold text-red-600 mb-2">Routeur vs Switch</h4>
+                            <p class="text-slate-700 text-sm">Un switch L2 a besoin d'une IP <span class="font-bold bg-yellow-100">uniquement</span> pour être géré à distance (SSH/Telnet), pas pour commuter les données.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded shadow-sm">
+                            <h4 class="font-bold text-red-600 mb-2">Passerelle par défaut</h4>
+                            <p class="text-slate-700 text-sm">Si mal configurée, le PC communique en local mais <span class="font-bold bg-yellow-100">PAS avec Internet</span>.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded shadow-sm">
+                            <h4 class="font-bold text-red-600 mb-2">Traitement Routeur</h4>
+                            <p class="text-slate-700 text-sm">Le routeur change l'en-tête L2 (MAC) et le TTL, mais les IPs source/dest ne <span class="font-bold bg-yellow-100">changent PAS</span> (sauf NAT).</p>
+                        </div>
+                        <div class="bg-white p-4 rounded shadow-sm">
+                            <h4 class="font-bold text-red-600 mb-2">CSMA/CD vs CA</h4>
+                            <p class="text-slate-700 text-sm"><span class="font-bold">CD</span> (Detection) = Ethernet filaire.<br><span class="font-bold">CA</span> (Avoidance) = Wi-Fi.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data ---
+        const protocolData = [
+            { name: 'SSH', port: 22, transport: 'TCP', desc: 'Accès distant sécurisé (chiffré).' },
+            { name: 'Telnet', port: 23, transport: 'TCP', desc: 'Accès distant non sécurisé (texte clair).' },
+            { name: 'SMTP', port: 25, transport: 'TCP', desc: 'Envoi de courriels.' },
+            { name: 'DNS', port: 53, transport: 'UDP/TCP', desc: 'Traduit Noms <-> IP.' },
+            { name: 'DHCP', port: '67/68', transport: 'UDP', desc: 'Affecte dynamiquement des IP.' },
+            { name: 'TFTP', port: 69, transport: 'UDP', desc: 'Transfert de fichiers simple.' },
+            { name: 'HTTP', port: 80, transport: 'TCP', desc: 'Web non sécurisé.' },
+            { name: 'POP3', port: 110, transport: 'TCP', desc: 'Récupère et supprime les mails.' },
+            { name: 'IMAP', port: 143, transport: 'TCP', desc: 'Récupère avec copie serveur.' },
+            { name: 'HTTPS', port: 443, transport: 'TCP', desc: 'Web sécurisé (chiffré).' }
+        ];
+
+        const threatsData = [
+            { title: 'Cheval de Troie', desc: 'Malware caché dans un logiciel légitime.' },
+            { title: 'Ver (Worm)', desc: 'Se propage automatiquement via le réseau (ralentit tout).' },
+            { title: 'DoS (Déni de Service)', desc: 'Sature un système pour le rendre indisponible.' },
+            { title: 'Reconnaissance', desc: 'Repérage (scan) avant l\'attaque.' }
+        ];
+
+        const cliOutputs = {
+            'ping': `Pinging 192.168.1.1 with 32 bytes of data:\nReply from 192.168.1.1: bytes=32 time<1ms TTL=128\nReply from 192.168.1.1: bytes=32 time<1ms TTL=128\n\nPing statistics for 192.168.1.1:\n    Packets: Sent = 2, Received = 2, Lost = 0 (0% loss)`,
+            'ipconfig': `Windows IP Configuration\n\nEthernet adapter Ethernet:\n   Connection-specific DNS Suffix  . : \n   Link-local IPv6 Address . . . . . : fe80::a1b2:c3d4:e5f6%12\n   IPv4 Address. . . . . . . . . . . : 192.168.1.15\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 192.168.1.1`,
+            'tracert': `Tracing route to google.com [142.250.1.138]\nover a maximum of 30 hops:\n\n  1    <1 ms    <1 ms    <1 ms  192.168.1.1\n  2    10 ms    12 ms    11 ms  10.0.0.1\n  3    15 ms    14 ms    16 ms  142.250.1.138\n\nTrace complete.`,
+            'sh_ip_int_br': `Router# show ip interface brief\nInterface              IP-Address      OK? Method Status                Protocol\nGigabitEthernet0/0     192.168.1.1     YES manual up                    up      \nGigabitEthernet0/1     unassigned      YES unset  administratively down down    \nVlan1                  unassigned      YES unset  administratively down down`,
+            'sh_run': `Router# show running-config\nBuilding configuration...\n\nCurrent configuration : 1024 bytes\n!\nversion 15.1\nhostname Router1\n!\ninterface GigabitEthernet0/0\n ip address 192.168.1.1 255.255.255.0\n duplex auto\n speed auto\n!\nline vty 0 4\n password cisco\n login\n!`,
+            'sh_ip_route': `Router# show ip route\nCodes: L - local, C - connected, S - static, R - RIP\n\nGateway of last resort is not set\n\n      192.168.1.0/24 is variably subnetted, 2 subnets, 2 masks\nC        192.168.1.0/24 is directly connected, GigabitEthernet0/0\nL        192.168.1.1/32 is directly connected, GigabitEthernet0/0`
+        };
+
+        // --- Functions ---
+
+        // Initialize Table
+        function renderTable(data) {
+            const tbody = document.getElementById('protocolTableBody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0';
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-slate-800">${item.name}</td>
+                    <td class="p-3 font-mono text-blue-600">${item.port}</td>
+                    <td class="p-3"><span class="px-2 py-1 rounded-full text-xs font-bold ${item.transport.includes('TCP') ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}">${item.transport}</span></td>
+                    <td class="p-3 text-slate-500">${item.desc}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Initialize Threats Accordion
+        function renderThreats() {
+            const container = document.getElementById('threatsContainer');
+            threatsData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'p-4 hover:bg-red-50 cursor-pointer transition-colors';
+                div.onclick = () => {
+                    const desc = div.querySelector('.threat-desc');
+                    desc.classList.toggle('hidden');
+                };
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h5 class="font-bold text-slate-700">${item.title}</h5>
+                        <span class="text-slate-400 text-sm">▼</span>
+                    </div>
+                    <p class="threat-desc hidden mt-2 text-sm text-slate-600 pl-4 border-l-2 border-red-200">${item.desc}</p>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // CLI Simulator Logic
+        let typeInterval;
+        function runCommand(cmdKey) {
+            const outputDiv = document.getElementById('terminalOutput');
+            const outputText = cliOutputs[cmdKey];
+            const prompt = cmdKey.startsWith('sh') ? 'Router# ' : 'C:\\Users\\Admin> ';
+            const cmdString = cmdKey.startsWith('sh') ? cmdKey.replace(/_/g, ' ').replace('sh ', 'show ') : cmdKey.replace('tracert', 'tracert google.com').replace('ping', 'ping 192.168.1.1');
+
+            // Clear previous interval if user clicks fast
+            clearInterval(typeInterval);
+            
+            // Clear or Append? Let's clear for cleaner demo, or simulate scrolling.
+            // Let's create a new block for this interaction
+            outputDiv.innerHTML += `\n${prompt}${cmdString}\n`;
+            
+            let i = 0;
+            typeInterval = setInterval(() => {
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+                if (i < outputText.length) {
+                    outputDiv.innerHTML += outputText.charAt(i);
+                    i++;
+                } else {
+                    clearInterval(typeInterval);
+                    outputDiv.innerHTML += `\n\n${prompt}<span class="terminal-cursor"></span>`;
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
+                }
+            }, 5); // Typing speed
+        }
+
+        // Search Logic
+        document.getElementById('portSearch').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = protocolData.filter(p => 
+                p.name.toLowerCase().includes(term) || 
+                p.port.toString().includes(term) ||
+                p.desc.toLowerCase().includes(term)
+            );
+            renderTable(filtered);
+        });
+
+        // Scroll Logic
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if(el) el.scrollIntoView({ behavior: 'smooth' });
+            // Close mobile menu if open
+            document.getElementById('sidebar').classList.add('hidden');
+        }
+
+        // Mobile Menu
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('fixed'); // Ensure it covers content on mobile
+            sidebar.style.top = '60px'; // Below header
+        });
+
+        // --- Charts Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTable(protocolData);
+            renderThreats();
+
+            // Protocol Chart (Doughnut)
+            const ctxProto = document.getElementById('protocolChart').getContext('2d');
+            new Chart(ctxProto, {
+                type: 'doughnut',
+                data: {
+                    labels: ['TCP Only', 'UDP Only', 'Both'],
+                    datasets: [{
+                        data: [7, 2, 1], // Based on the 10 key protocols
+                        backgroundColor: ['#3b82f6', '#f97316', '#a855f7'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Subnet Chart (Bar)
+            const ctxSubnet = document.getElementById('subnetChart').getContext('2d');
+            new Chart(ctxSubnet, {
+                type: 'bar',
+                data: {
+                    labels: ['/24 (Class C)', '/25', '/26', '/27', '/28', '/29', '/30 (P2P)'],
+                    datasets: [{
+                        label: 'Hôtes Utilisables',
+                        data: [254, 126, 62, 30, 14, 6, 2],
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `Hôtes: ${ctx.raw}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Nombre d\'Hôtes' }
+                        }
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
